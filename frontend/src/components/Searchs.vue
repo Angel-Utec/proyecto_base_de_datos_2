@@ -131,10 +131,15 @@ export default {
         month: "",
         content: "",
       },
+      query: {
+        stopword: "",
+        idf: "",
+      },
       busqueda: {
         busqueda_input: "",
         top_k: "",
       },
+      datos_query: [],
       datos_post: [],
       datos: [],
     };
@@ -188,6 +193,11 @@ export default {
 
           sendBatch();
         },
+      });
+    },
+    Consulta_parser() {
+      Services.postParser(this.busqueda).then((response) => {
+        this.datos_busqueda = response.data.busqueda;
       });
     },
   },

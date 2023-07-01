@@ -4,7 +4,7 @@
 #2. SET FLASK_APP=server
 #3. SET FLASK_ENV=development
 #4. flask run
-
+import backend
 from unicodedata import name
 from flask import(
     Flask,
@@ -12,13 +12,16 @@ from flask import(
     jsonify,
     request
 )
-
+from flask_sqlalchemy import SQLAlchemy 
 from flask_cors import CORS
-
-from models import setup_db, Post
+from models import setup_db, Post, Query
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem.snowball import SnowballStemmer
 
 #Paginación
-
+db = SQLAlchemy()
 TODOS_PER_PAGE=1000000
 
 def paginate(request,selection,isDescendent):
@@ -34,7 +37,6 @@ def paginate(request,selection,isDescendent):
     resources = [resource.format() for resource in selection]
     current_resources= resources[start:end]
     return current_resources
-
 
 #API
 
@@ -77,7 +79,8 @@ def create_app(test_config=None):
 
         if author is None or title is None or publication is None or content is None:
             abort(422)
-            
+        
+        #AGREGAR LA FUNCION DE TOKENIZADOR
         post = Post(title=title,publication=publication,author=author,date=date, year=year, month=month, content=content)
         post.insert()
         new_post_id=post.id
@@ -95,6 +98,86 @@ def create_app(test_config=None):
             'total_posts': len(selection)
         })
 
+    @app.route('/parser', methods=['POST'])      
+    def parser():
+        Query.query.delete()
+        db.session.commit()
+        body = request.get_json()
+        busqueda_input = body.get('busqueda_input')
+        top_k = body.get('top_k')
+
+        if busqueda_input is None or top_k is None:
+            abort(422)
+
+        stemmer = SnowballStemmer("english")
+        stop_words = stopwords.words('english')
+        archivo = open("./stopwords.txt", "r", encoding="utf-8")
+        contenido = archivo.read()
+        stoplist = contenido.split()
+        filtro = []
+        for x in range(97, 123):
+            filtro.append(chr(x))
+        tokens = []
+        tokens_prepro = word_tokenize(busqueda_input)
+        print(tokens_prepro)
+        # for token in tokens_prepro:
+        #     token_lower = token.lower()
+        #     if token_lower not in stop_words and len(token_lower) >= 3:
+        #         token_res = stemmer.stem(token_lower)
+        #         tokens.append(token_res)
+
+        for token in tokens_prepro:
+            token_min = token.lower()
+            if len(token_min) >= 3 and token_min not in stoplist and token_min != "" and token not in stop_words:
+                token_res = stemmer.stem(token_min)
+                tokens.append(token_res)
+        print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+        print(tokens)
+        print("Entrando a resultados")
+        tokenizado = backend.tokenizar(tokens)
+        print(tokenizado)
+        resultados = backend.matrizk(tokenizado,top_k)
+        # for res in tokens:
+        #     query = Query()
+        print("Procesado")
+        print(resultados)
+        return jsonify({
+            'success': True,
+            'query': tokens,
+        })
+    
+    @app.route('/parser', methods=['GET'])
+    def get_parser():
+        selection=Query.query.order_by('id').all()
+        query=paginate(request,selection,False)
+      
+        if (len(query))==0:
+            abort(404) 
+
+        return jsonify({    #Las claves estarán ordenadas en orden alfabético
+            'success': True,
+            'query': query,
+            'total_query': len(selection)
+        })
+    # @app.route('/parser_enviar', methods=['GET'])  
+    # def comparar(lista_tuplas, texto, n):
+    # # Tokenización del texto de entrada
+    #     tokens = word_tokenize(texto)
+
+    #     # Filtrar las tuplas que contienen tokens en el texto de entrada
+    #     tuplas_coincidentes = []
+    #     for tupla in lista_tuplas:
+    #         if any(token in tupla[0] for token in tokens):
+    #             tuplas_coincidentes.append(tupla)
+
+    #     # Ordenar las tuplas por valor numérico de forma descendente
+    #     tuplas_ordenadas = sorted(tuplas_coincidentes, key=lambda x: x[1], reverse=True)
+
+    #     # Obtener las primeras "n" tuplas con los valores más altos
+    #     tuplas_resultantes = tuplas_ordenadas[:n]
+
+    #     return tuplas_resultantes
+    
     @app.route('/posts/<post_id>',methods=['DELETE'])  
     def delete_post(post_id):
         error_404=False
@@ -121,7 +204,6 @@ def create_app(test_config=None):
                 abort(404)  
             else:
                 abort(500)
-        
     #Manejo de errores
 
     @app.errorhandler(404)

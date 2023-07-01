@@ -19,4 +19,10 @@ export default {
   deletePost(id_post) {
     return api_posts.delete("/posts/" + id_post);
   },
+  getParser() {
+    return api_posts.get("/parser");
+  },
+  postParser(query) {
+    return api_posts.post("/parser", query);
+  },
 };

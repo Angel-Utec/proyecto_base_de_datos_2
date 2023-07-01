@@ -52,3 +52,28 @@ class Post(db.Model):
     def delete(self):
         db.session.delete(self)
         db.session.commit()
+
+
+class Query(db.Model):
+    __tablename__ = 'query'
+    id = db.Column(db.Integer, primary_key = True)
+    stopword = db.Column(db.Text)
+    
+    #Metodo que formatee el objeto a json para devolverlo a mi API y que no de errores
+    def format(self):
+        return {
+            'id':self.id,
+            'stopword':self.stopword,
+        }
+
+    #Metodo que permite la inserción de un post a través de nuestra API
+    def insert(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def update(self):
+        db.session.commit()
+
+    def delete(self):
+        db.session.delete(self)
+        db.session.commit()

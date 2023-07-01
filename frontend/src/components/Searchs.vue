@@ -164,8 +164,8 @@ export default {
           const datos = results.data;
           this.datos_post = datos;
 
-          const batchSize = 100; // Tamaño del lote
-          const delay = 100; // Retardo entre cada lote (en milisegundos)
+          const batchSize = 1000; // Tamaño del lote
+          const delay = 240000; // Retardo entre cada lote (en milisegundos)
 
           let index = 0;
 
@@ -182,8 +182,8 @@ export default {
               Services.postPost(this.post).then((response) => {
                 this.datos = response.data.posts;
               });
-
               index++;
+              console.log(index);
             }
 
             if (index < datos.length) {
